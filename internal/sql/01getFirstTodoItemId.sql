@@ -1,0 +1,1 @@
+SELECT id FROM todo ORDER BY id ASC LIMIT 1;
