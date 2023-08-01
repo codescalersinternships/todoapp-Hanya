@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	todo "todo/internal"
+	todo "github.com/codescalersinternships/todoapp-Hanya/internal"
 )
 
 func main() {

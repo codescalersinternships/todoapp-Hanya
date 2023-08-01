@@ -16,7 +16,7 @@ import (
 
 func TestParseCommandLine(t *testing.T) {
 	t.Run("error when no -f is specified", func(t *testing.T) {
-		os.Args = []string{"./todo", "./todo.db"}
+		os.Args = []string{"./todo", "../todo.db"}
 		expectedErr := ErrNoDatabaseFound
 		path, port, err := ParseCommandLine()
 		assert.ErrorIs(t, err, expectedErr)
@@ -27,7 +27,7 @@ func TestParseCommandLine(t *testing.T) {
 
 func TestNewApp(t *testing.T) {
 	t.Run("newdb returns no error", func(t *testing.T) {
-		app := &App{DbPath: "./todo.db"}
+		app := &App{DbPath: "../todo.db"}
 		err := app.NewApp(3000)
 		assert.NoError(t, err)
 	})
@@ -36,7 +36,7 @@ func TestNewApp(t *testing.T) {
 func TestInsertTodo(t *testing.T) {
 	t.Run("insertodo returns status code 201", func(t *testing.T) {
 		router := gin.Default()
-		app := &App{DbPath: "./todo.db"}
+		app := &App{DbPath: "../todo.db"}
 		err := app.NewApp(3000)
 		assert.NoError(t, err, "failed to connect to database")
 		router.POST("/todos", app.insertTodo)
@@ -56,7 +56,7 @@ func TestInsertTodo(t *testing.T) {
 func TestGetAllTodos(t *testing.T) {
 	t.Run("getalltodos returns status 200", func(t *testing.T) {
 		router := gin.Default()
-		app := &App{DbPath: "./todo.db"}
+		app := &App{DbPath: "../todo.db"}
 		err := app.NewApp(3000)
 		assert.NoError(t, err, "failed to connect to database")
 		router.GET("/", app.getAllTodos)
@@ -90,7 +90,7 @@ func TestGetTodo(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
 			router := gin.Default()
-			app := &App{DbPath: "./todo.db"}
+			app := &App{DbPath: "../todo.db"}
 			err := app.NewApp(3000)
 			assert.NoError(t, err, "failed to connect to database")
 			var id int
@@ -130,11 +130,12 @@ func TestUpdateTodo(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
 			router := gin.Default()
-			app := &App{DbPath: "./todo.db"}
+			app := &App{DbPath: "../todo.db"}
 			err := app.NewApp(3000)
 			assert.NoError(t, err, "failed to connect to database")
 			var id int
 			err = app.db.QueryRow(getTodoItemTestQuery).Scan(&id)
+			fmt.Println("IDDDDD",id)
 			assert.NoError(t, err, "failed to get id of first row")
 			router.PATCH("/todo/:id", app.updateTodo)
 			newTodo := TodoItem{Task: "Updated task", Completed: true}
@@ -175,7 +176,7 @@ func TestDeleteTodo(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
 			router := gin.Default()
-			app := &App{DbPath: "./todo.db"}
+			app := &App{DbPath: "../todo.db"}
 			err := app.NewApp(3000)
 			assert.NoError(t, err, "failed to connect to database")
 			var id int
@@ -200,7 +201,7 @@ func TestDeleteTodo(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	t.Run("close ends database connection", func(t *testing.T) {
-		app := &App{DbPath: "./todo.db"}
+		app := &App{DbPath: "../todo.db"}
 		err := app.NewApp(3000)
 		assert.NoError(t, err)
 		err = app.Close()

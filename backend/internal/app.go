@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -43,6 +44,7 @@ var updateTodoItemQuery string
 var deleteTodoItemQuery string
 
 var (
+	// ErrNoDatabaseFound indicates abscence of -f flag
 	ErrNoDatabaseFound = errors.New("no database path specified")
 )
 
@@ -75,6 +77,7 @@ func (app *App) insertTodo(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
+
 	_, err := app.db.Exec(insertTodoQuery, todoItem.Task, todoItem.Completed)
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
@@ -159,6 +162,7 @@ func (app *App) deleteTodo(c *gin.Context) {
 }
 func (app *App) Run() error {
 	router := gin.New()
+	router.Use(cors.Default())
 	router.POST("/todo", app.insertTodo)
 	router.GET("/", app.getAllTodos)
 	router.GET("/todo/:id", app.getTodo)
