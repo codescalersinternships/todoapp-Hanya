@@ -17,7 +17,7 @@
               />
               <div class="input-group-prepend">
                 <button
-                  @click="insertTodo"
+                  @click="insertTask"
                   class="input-group-text btn btn-primary"
                   id="inputGroup-sizing-default"
                 >
@@ -27,36 +27,60 @@
             </div>
             <ul class="list-group rounded-0">
               <li
-                class="list-group-item border-0 d-flex align-items-center ps-0"
-                v-for="todo in todos"
-                :key="todo.id"
+                class="list-group-item border-0.5 d-flex align-items-center ps-0"
+                v-for="task in tasks"
+                :key="task.id"
+                :class="{ 'text-decoration-line-through': task.completed }"
               >
-                <input
-                  class="form-check-input me-3"
-                  type="checkbox"
-                  value=""
-                  aria-label="..."
-                  @click="toggleCompleted(todo)"
-                />
+                <div class="d-flex col-1 justify-content-center">
+                  <input
+                    class="form-check-input me-3"
+                    type="checkbox"
+                    value=""
+                    aria-label="..."
+                    @click="toggleCompleted(task)"
+                    :checked="task.completed"
+                  />
+                </div>
                 <div
-                  class="d-flex align-items-center col-10 justify-content-between"
+                  v-if="editBool && task.id === editTaskId"
+                  class="col-12 d-flex justify-content-between"
                 >
-                  <div>
-                    <span>{{ todo.task }}</span>
-                  </div>
+                  <input type="text" v-model="updatedTitle" />
                   <div>
                     <button
                       class="btn btn-primary btn-sm"
-                      @click="updateTodo(todo)"
+                      @click="saveTask(task)"
                     >
-                      <i class="bi bi-pencil-square ms-auto"></i>
+                      Save
                     </button>
                     <button
-                      class="btn btn-danger btn-sm"
-                      @click="deleteTodo(todo.id)"
+                      class="btn btn-secondary btn-sm ms-2"
+                      @click="cancelEdit"
                     >
-                      <i class="bi bi-trash3-fill ms-2"></i>
+                      Cancel
                     </button>
+                  </div>
+                </div>
+                <div v-else class="col-11 d-flex justify-content-between">
+                  <div class="d-flex col-12 justify-content-between">
+                    <div>
+                      <span>{{ task.task }}</span>
+                    </div>
+                    <div>
+                      <button
+                        class="btn btn-primary btn-sm"
+                        @click="startEdit(task)"
+                      >
+                        <i class="bi bi-pencil-square"></i>
+                      </button>
+                      <button
+                        class="btn btn-danger btn-sm"
+                        @click="deleteTask(task.id)"
+                      >
+                        <i class="bi bi-trash3-fill"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </li>
@@ -67,12 +91,12 @@
     </div>
   </div>
 </template>
+
 <script lang="ts">
 import { defineComponent } from "vue";
 import "bootstrap/dist/css/bootstrap.css";
 import "bootstrap/dist/js/bootstrap.js";
 import "bootstrap-icons/font/bootstrap-icons.css";
-import Todo from "@/components/Todo.vue"; // @ is an alias to /src
 interface TodoItem {
   id: number;
   task: string;
@@ -83,19 +107,22 @@ export default defineComponent({
   components: {},
   data() {
     return {
-      todos: [] as TodoItem[],
+      tasks: [] as TodoItem[],
       taskInput: "",
+      updatedTitle: "",
+      editBool: false as boolean,
+      editTaskId: null as number | null,
     };
   },
-  mounted() {
-    this.getAllTodos();
+  beforeMount() {
+    this.getAllTasks();
   },
   methods: {
-    toggleCompleted(todo: TodoItem) {
-      todo.completed = !todo.completed;
-      this.updateTodo(todo);
+    toggleCompleted(task: TodoItem) {
+      task.completed = !task.completed;
+      this.updateTask(task);
     },
-    getAllTodos() {
+    getAllTasks() {
       fetch("http://localhost:3000/")
         .then((response) => {
           if (!response.ok) {
@@ -104,13 +131,13 @@ export default defineComponent({
           return response.json();
         })
         .then((data) => {
-          this.todos = data;
+          this.tasks = data;
         })
         .catch((error) => {
-          console.error("error fetching todos", error);
+          console.error("error fetching tasks", error);
         });
     },
-    insertTodo() {
+    insertTask() {
       const body = {
         task: this.taskInput,
       };
@@ -125,42 +152,63 @@ export default defineComponent({
         body: JSON.stringify(body),
       }).then((response) => {
         if (response.ok) {
+          this.getAllTasks();
           console.log("Data posted successfully!");
         } else {
           throw new Error("error posting data");
         }
       });
     },
-    deleteTodo(id: number) {
+    deleteTask(id: number) {
       fetch(`http://localhost:3000/todo/${id}`, {
         method: "DELETE",
       })
         .then((response) => {
           if (response.ok) {
-            console.log("todo deleted successfully");
+            this.getAllTasks();
+            console.log("task deleted successfully");
           } else {
-            throw new Error("failed to delete todo");
+            throw new Error("failed to delete task");
           }
         })
         .catch((error) => {
-          console.error("error deleting todo", error);
+          console.error("error deleting task", error);
         });
     },
-    updateTodo(todo: TodoItem) {
-      fetch(`http://localhost:3000/todo/${todo.id}`, {
+    updateTask(task: TodoItem) {
+      fetch(`http://localhost:3000/todo/${task.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ task: todo.task, completed: todo.completed }),
+        body: JSON.stringify({
+          task: task.task,
+          completed: task.completed,
+        }),
       })
         .then((response) => {
           if (response.ok) {
-            console.log("todo updated successfully!", response);
+            this.getAllTasks();
+            console.log("task updated successfully!", response);
           } else {
-            throw new Error("failed to update todo");
+            throw new Error("failed to update task");
           }
         })
         .catch((error) => {
-          console.error("error updating todo:", error);
+          console.error("error updating task:", error);
         });
+    },
+    startEdit(task: TodoItem) {
+      this.editBool = true;
+      this.editTaskId = task.id;
+      this.updatedTitle = task.task;
+    },
+    saveTask(task: TodoItem) {
+      task.task = this.updatedTitle;
+      this.updateTask(task);
+      this.cancelEdit();
+    },
+    cancelEdit() {
+      this.editBool = false;
+      this.editTaskId = null;
+      this.updatedTitle = "";
     },
   },
 });

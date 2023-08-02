@@ -7,12 +7,6 @@ const routes: Array<RouteRecordRaw> = [
     name: "todo",
     component: TodoView,
   },
-  {
-    path: "/about",
-    name: "about",
-    component: () =>
-      import(/* webpackChunkName: "about" */ "../views/AboutView.vue"),
-  },
 ];
 
 const router = createRouter({

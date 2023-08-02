@@ -77,7 +77,6 @@ func (app *App) insertTodo(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-
 	_, err := app.db.Exec(insertTodoQuery, todoItem.Task, todoItem.Completed)
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
