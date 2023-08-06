@@ -26,7 +26,7 @@ func TestParseCommandLine(t *testing.T) {
 }
 
 func TestNewApp(t *testing.T) {
-	t.Run("newdb returns no error", func(t *testing.T) {
+	t.Run("newApp returns no error", func(t *testing.T) {
 		app := &App{DbPath: "../todo.db"}
 		err := app.NewApp(3000)
 		assert.NoError(t, err)
@@ -135,7 +135,6 @@ func TestUpdateTodo(t *testing.T) {
 			assert.NoError(t, err, "failed to connect to database")
 			var id int
 			err = app.db.QueryRow(getTodoItemTestQuery).Scan(&id)
-			fmt.Println("IDDDDD",id)
 			assert.NoError(t, err, "failed to get id of first row")
 			router.PATCH("/todo/:id", app.updateTodo)
 			newTodo := TodoItem{Task: "Updated task", Completed: true}
