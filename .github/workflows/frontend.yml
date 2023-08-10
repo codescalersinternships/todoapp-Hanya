@@ -16,14 +16,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
-        working-directory: frontend
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+        
     - name: Lint Code 
+      working-directory: frontend
       run: npx eslint --ext .js,.vue --fix src
       
-    - run: npm ci
-    - run: npm run build --if-present
+    - name: Clean Install
+      working-directory: frontend
+      run: npm ci
+      
+    - name: Build
+      working-directory: frontend  
+      run: npm run build --if-present
