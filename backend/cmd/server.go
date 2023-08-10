@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
 	todo "github.com/codescalersinternships/todoapp-Hanya/internal"
+	"log"
 )
 
 func main() {
@@ -11,7 +11,7 @@ func main() {
 		log.Fatal(err)
 	}
 	app := &todo.App{}
-	err = app.NewApp(port,dbPath)
+	err = app.NewApp(port, dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
