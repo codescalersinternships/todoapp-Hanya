@@ -20,6 +20,10 @@ jobs:
         working-directory: frontend
         node-version: '20.x'
         
+    - name: Install Ddependencies
+      working-directory: frontend
+      run: npm install
+      
     - name: Lint Code 
       working-directory: ./frontend/
       run: npx eslint --ext .js,.vue --fix src
