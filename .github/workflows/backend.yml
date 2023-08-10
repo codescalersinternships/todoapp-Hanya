@@ -20,6 +20,8 @@ jobs:
           
     - name: Install linter
       uses: golangci/golangci-lint-action@v3
+      with:
+        working-directory: ./backend/
         
     - name: Lint code
       working-directory: ./backend/
