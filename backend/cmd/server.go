@@ -10,12 +10,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	app := &todo.App{DbPath: dbPath}
-	err = app.NewApp(port)
+	app := &todo.App{}
+	err = app.NewApp(port,dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = app.Run()
+	err = app.Run(port)
 	if err != nil {
 		log.Fatal(err)
 	}

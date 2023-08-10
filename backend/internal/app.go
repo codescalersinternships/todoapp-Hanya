@@ -1,47 +1,23 @@
 package todo
 
 import (
-	"database/sql"
 	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
-	"net/http"
+	"strconv"
 
+	"github.com/codescalersinternships/todoapp-Hanya/internal/models"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/rs/zerolog/log"
 )
 
 type App struct {
-	db     *sql.DB
-	DbPath string
-	port   int
+	db     models.DB
+	router *gin.Engine
 }
-
-type TodoItem struct {
-	ID        string `json:"id"`
-	Task      string `json:"task"`
-	Completed bool   `json:"completed"`
-}
-
-//go:embed sql/01createTableTodo.sql
-var createTableQuery string
-
-//go:embed sql/01insertTodoItem.sql
-var insertTodoQuery string
-
-//go:embed sql/01getAllTodoList.sql
-var getAllTodosQuery string
-
-//go:embed sql/01getTodoItem.sql
-var getTodoItemQuery string
-
-//go:embed sql/01updateTodoItem.sql
-var updateTodoItemQuery string
-
-//go:embed sql/01deleteTodoItem.sql
-var deleteTodoItemQuery string
 
 var (
 	// ErrNoDatabaseFound indicates abscence of -f flag
@@ -60,117 +36,104 @@ func ParseCommandLine() (string, int, error) {
 	return dbPath, port, nil
 }
 
-func (app *App) NewApp(port int) error {
-	database, err := sql.Open("sqlite3", app.DbPath)
-	if err != nil {
-		return err
-	}
-	app.db = database
-	app.port = port
-	_, err = app.db.Exec(createTableQuery)
+func (app *App) NewApp(port int, dbPath string) error {
+	db, err := models.NewDB(dbPath)
+	app.db = db
 	return err
 }
 
-func (app *App) insertTodo(c *gin.Context) {
-	var todoItem TodoItem
+func (app *App) insertTodo(c *gin.Context) (interface{}, Response) {
+	var todoItem models.TodoItem
 	if err := c.ShouldBindJSON(&todoItem); err != nil {
-		c.Status(http.StatusBadRequest)
-		return
+		log.Error().Err(err).Send()
+		return nil, BadRequest(errors.New("error binding json data"))
 	}
-	_, err := app.db.Exec(insertTodoQuery, todoItem.Task, todoItem.Completed)
+	err := app.db.InsertTodo(todoItem)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		return
+		log.Error().Err(err).Send()
+		return nil, InternalServerError(errors.New("error inserting new task"))
 	}
-	c.JSON(http.StatusCreated, todoItem)
+	return ResponseMsg{
+		Message: "task inserted successfully",
+		Data:    todoItem,
+	}, Created()
 }
 
-func (app *App) getAllTodos(c *gin.Context) {
-	var todoList []TodoItem
-	rows, err := app.db.Query(getAllTodosQuery)
+func (app *App) getAllTodos(c *gin.Context) (interface{}, Response) {
+	todoList, err := app.db.GetAllTodos()
 	if err != nil {
-		c.Status(http.StatusBadRequest)
-		return
+		log.Error().Err(err).Send()
+		return nil, BadRequest(errors.New("error retrieving all tasks"))
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var todoItem TodoItem
-		err := rows.Scan(&todoItem.ID, &todoItem.Task, &todoItem.Completed)
-		if err != nil {
-			c.Status(http.StatusInternalServerError)
-			return
+	return ResponseMsg{
+		Message: "all tasks retrieved successfully",
+		Data:    todoList,
+	}, Ok()
+}
+
+func (app *App) getTodo(c *gin.Context) (interface{}, Response) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	todoItem, err := app.db.GetTodo(id)
+	if err != nil {
+		log.Error().Err(err).Send()
+		return nil, NotFound(errors.New("error retrieving task"))
+	}
+	return ResponseMsg{
+		Message: "task retrieved successfully",
+		Data:    todoItem,
+	}, Ok()
+}
+
+func (app *App) updateTodo(c *gin.Context) (interface{}, Response) {
+	var todoItem models.TodoItem
+	if err := c.ShouldBindJSON(&todoItem); err != nil {
+		log.Error().Err(err).Send()
+		return nil, BadRequest(errors.New("error binding json data"))
+	}
+	id, _ := strconv.Atoi(c.Param("id"))
+	err := app.db.UpdateTodo(todoItem, id)
+	if err != nil {
+		log.Error().Err(err).Send()
+		if err == models.ErrTodoNotFound {
+			return nil, NotFound(err)
 		}
-		todoList = append(todoList, todoItem)
+		return nil, InternalServerError(errors.New("error updating task"))
 	}
-	c.JSON(http.StatusOK, todoList)
+	return ResponseMsg{
+		Message: "task updates successfully",
+		Data:    todoItem,
+	}, Ok()
 }
 
-func (app *App) getTodo(c *gin.Context) {
-	var todoItem TodoItem
-	row := app.db.QueryRow(getTodoItemQuery, c.Param("id"))
-	err := row.Scan(&todoItem.ID, &todoItem.Task, &todoItem.Completed)
+func (app *App) deleteTodo(c *gin.Context) (interface{}, Response) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	err := app.db.DeleteTodo(id)
 	if err != nil {
-		c.Status(http.StatusNotFound)
-		return
-	}
-	c.JSON(http.StatusOK, todoItem)
-}
+		if err == models.ErrTodoNotFound {
+			log.Error().Err(err).Send()
+			return nil, NotFound(err)
 
-func (app *App) updateTodo(c *gin.Context) {
-	var todoItem TodoItem
-	if err := c.ShouldBindJSON(&todoItem); err != nil {
-		c.Status(http.StatusBadRequest)
-		return
+		}
+		return nil, InternalServerError(errors.New("error deleting task"))
 	}
-	result, err := app.db.Exec(updateTodoItemQuery, todoItem.Task, boolToInt(todoItem.Completed), c.Param("id"))
-	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		c.Status(http.StatusNotFound)
-		return
-	}
-	c.JSON(http.StatusOK, todoItem)
+	return ResponseMsg{
+		Message: "task updates successfully",
+	}, Ok()
 }
-
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
+func (app *App) Run(port int) error {
+	app.router = gin.Default()
+	app.setRoutes()
+	return app.router.Run(fmt.Sprintf(":%d", port))
 }
-
-func (app *App) deleteTodo(c *gin.Context) {
-	result, err := app.db.Exec(deleteTodoItemQuery, c.Param("id"))
-	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	if rowsAffected == 0 {
-		c.Status(http.StatusNotFound)
-		return
-	}
-	c.Status(http.StatusOK)
+func (app *App) setRoutes() {
+	app.router = gin.Default()
+	app.router.Use(cors.Default())
+	app.router.POST("/todo", WrapFunc(app.insertTodo))
+	app.router.GET("/", WrapFunc(app.getAllTodos))
+	app.router.GET("/todo/:id", WrapFunc(app.getTodo))
+	app.router.PATCH("/todo/:id", WrapFunc(app.updateTodo))
+	app.router.DELETE("/todo/:id", WrapFunc(app.deleteTodo))
 }
-func (app *App) Run() error {
-	router := gin.New()
-	router.Use(cors.Default())
-	router.POST("/todo", app.insertTodo)
-	router.GET("/", app.getAllTodos)
-	router.GET("/todo/:id", app.getTodo)
-	router.PATCH("/todo/:id", app.updateTodo)
-	router.DELETE("/todo/:id", app.deleteTodo)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", app.port), router)
-	return err
-}
-
 func (app *App) Close() error {
 	err := app.db.Close()
 	return err
