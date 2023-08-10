@@ -22,7 +22,7 @@ jobs:
       uses: golangci/golangci-lint-action@v3
         
     - name: Lint code
-      working-directory: backend
+      working-directory: ./backend/
       run: golangci-lint run 
       
     - name: Build
@@ -35,9 +35,12 @@ jobs:
       
     - name: Run staticcheck
       uses: dominikh/staticcheck-action@v1.3.0
+      with:
+        working-directory: ./backend/
       
     - name: Run gofmt
       uses: Jerome1337/gofmt-action@v1.0.5
       with:
         gofmt-path: ./
         gofmt-flags: -l -d  
+        working-directory: ./backend/
