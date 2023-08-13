@@ -12,6 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type App struct {
@@ -42,6 +44,15 @@ func (app *App) NewApp(port int, dbPath string) error {
 	return err
 }
 
+// @Summary      inserts new task
+// @Description  accepts task's title and completed bool in json format and returns the created task in json
+// @Produce      json
+// @Tags         create
+// @Param        item  body      models.TodoItem  true  "task body"
+// @Success      201   {object}  models.TodoItem
+// @Router       /todo/ [post]
+// @Failure      400   "error binding json data"
+// @Failure      500   "error inserting new task"
 func (app *App) insertTodo(c *gin.Context) (interface{}, Response) {
 	var todoItem models.TodoItem
 	if err := c.ShouldBindJSON(&todoItem); err != nil {
@@ -59,6 +70,13 @@ func (app *App) insertTodo(c *gin.Context) (interface{}, Response) {
 	}, Created()
 }
 
+// @Summary      gets all tasks
+// @Description  retrieves a list of all tasks in database in json format
+// @Produce      json
+// @Tags         get
+// @Success      200  {object}  []models.TodoItem
+// @Router       / [get]
+// @Failure      400   "error retrieving all tasks"
 func (app *App) getAllTodos(c *gin.Context) (interface{}, Response) {
 	todoList, err := app.db.GetAllTodos()
 	if err != nil {
@@ -71,6 +89,14 @@ func (app *App) getAllTodos(c *gin.Context) (interface{}, Response) {
 	}, Ok()
 }
 
+// @Summary      gets a task by id
+// @Description  retrieves a list of all tasks in database in json format
+// @Produce      json
+// @Tags         get
+// @Param        id  path      string  true  "required task's id"
+// @Success      200  {object}  models.TodoItem
+// @Router       /todo/:id [get]
+// @Failure      400   "error retrieving task"
 func (app *App) getTodo(c *gin.Context) (interface{}, Response) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	todoItem, err := app.db.GetTodo(id)
@@ -84,6 +110,15 @@ func (app *App) getTodo(c *gin.Context) (interface{}, Response) {
 	}, Ok()
 }
 
+// @Summary      updates a task
+// @Description  accepts task's title and completed bool in json format and returns the created task in json
+// @Tags	 	 update
+// @Produce      json
+// @Param        item  body      models.TodoItem true "required task's id"
+// @Success      200  {object}  string
+// @Router       /todo/:id [patch]
+// @Failure      400  "error binding json data"
+// @Failure      500  "error updating task"
 func (app *App) updateTodo(c *gin.Context) (interface{}, Response) {
 	var todoItem models.TodoItem
 	if err := c.ShouldBindJSON(&todoItem); err != nil {
@@ -100,11 +135,19 @@ func (app *App) updateTodo(c *gin.Context) (interface{}, Response) {
 		return nil, InternalServerError(errors.New("error updating task"))
 	}
 	return ResponseMsg{
-		Message: "task updates successfully",
+		Message: "task updated successfully",
 		Data:    todoItem,
 	}, Ok()
 }
 
+// @Summary      deletes a task
+// @Description  accepts task's id and deletes it
+// @Tags	 	 delete
+// @Produce      json
+// @Param        item  body      models.TodoItem true "required task's id"
+// @Success      200  {object}  string
+// @Router       /todo/:id [delete]
+// @Failure      500  "error deleting task"
 func (app *App) deleteTodo(c *gin.Context) (interface{}, Response) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	err := app.db.DeleteTodo(id)
@@ -117,7 +160,7 @@ func (app *App) deleteTodo(c *gin.Context) (interface{}, Response) {
 		return nil, InternalServerError(errors.New("error deleting task"))
 	}
 	return ResponseMsg{
-		Message: "task updates successfully",
+		Message: "task deleted successfully",
 	}, Ok()
 }
 func (app *App) Run(port int) error {
@@ -128,11 +171,13 @@ func (app *App) Run(port int) error {
 func (app *App) setRoutes() {
 	app.router = gin.Default()
 	app.router.Use(cors.Default())
+	app.router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	app.router.POST("/todo", WrapFunc(app.insertTodo))
 	app.router.GET("/", WrapFunc(app.getAllTodos))
 	app.router.GET("/todo/:id", WrapFunc(app.getTodo))
 	app.router.PATCH("/todo/:id", WrapFunc(app.updateTodo))
 	app.router.DELETE("/todo/:id", WrapFunc(app.deleteTodo))
+
 }
 func (app *App) Close() error {
 	err := app.db.Close()

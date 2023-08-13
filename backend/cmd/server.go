@@ -1,10 +1,14 @@
 package main
 
 import (
-	todo "github.com/codescalersinternships/todoapp-Hanya/internal"
 	"log"
+
+	todo "github.com/codescalersinternships/todoapp-Hanya/internal"
 )
 
+// @title Todoapp API
+// @description     Todoapp local server
+// @host      localhost:3000
 func main() {
 	dbPath, port, err := todo.ParseCommandLine()
 	if err != nil {
