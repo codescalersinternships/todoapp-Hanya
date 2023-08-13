@@ -1,0 +1,125 @@
+definitions:
+  models.TodoItem:
+    properties:
+      completed:
+        type: boolean
+      id:
+        type: string
+      task:
+        type: string
+    type: object
+host: localhost:3000
+info:
+  contact: {}
+  description: Todoapp local server
+  title: Todoapp API
+paths:
+  /:
+    get:
+      description: retrieves a list of all tasks in database in json format
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.TodoItem'
+            type: array
+        "400":
+          description: error retrieving all tasks
+      summary: gets all tasks
+      tags:
+      - get
+  /todo/:
+    post:
+      description: accepts task's title and completed bool in json format and returns
+        the created task in json
+      parameters:
+      - description: task body
+        in: body
+        name: item
+        required: true
+        schema:
+          $ref: '#/definitions/models.TodoItem'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.TodoItem'
+        "400":
+          description: error binding json data
+        "500":
+          description: error inserting new task
+      summary: inserts new task
+      tags:
+      - create
+  /todo/:id:
+    delete:
+      description: accepts task's id and deletes it
+      parameters:
+      - description: required task's id
+        in: body
+        name: item
+        required: true
+        schema:
+          $ref: '#/definitions/models.TodoItem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: error deleting task
+      summary: deletes a task
+      tags:
+      - delete
+    get:
+      description: retrieves a list of all tasks in database in json format
+      parameters:
+      - description: required task's id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TodoItem'
+        "400":
+          description: error retrieving task
+      summary: gets a task by id
+      tags:
+      - get
+    patch:
+      description: accepts task's title and completed bool in json format and returns
+        the created task in json
+      parameters:
+      - description: required task's id
+        in: body
+        name: item
+        required: true
+        schema:
+          $ref: '#/definitions/models.TodoItem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: error binding json data
+        "500":
+          description: error updating task
+      summary: updates a task
+      tags:
+      - update
+swagger: "2.0"
