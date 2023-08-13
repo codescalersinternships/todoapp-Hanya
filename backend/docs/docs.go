@@ -207,8 +207,6 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "Todoapp local server",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
-	LeftDelim:        "{{",
-	RightDelim:       "}}",
 }
 
 func init() {
